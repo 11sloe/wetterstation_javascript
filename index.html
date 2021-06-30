@@ -91,37 +91,28 @@
     const senseBoxID = "607db857542eeb001cba21f0";
     const api_url = "https://api.opensensemap.org/boxes/" + senseBoxID;
 
-    let box;
-    let tempChart;
-    let druckChart;
-
+   
     aktualisieren();
     // aktualisiere die Seite alls 60 Sekunden
     let intervalID = window.setInterval(aktualisieren, 60000);
 
     async function aktualisieren() {
-      await getSenseBoxDaten();
-      aktualisiereAnzeige();
-      tempChart = erstelleDiagramm("Temperatur", box.sensors[0]._id, "tempChart");
-      druckChart = erstelleDiagramm("Druck", box.sensors[2]._id, "druckChart");
+      const box = await getSenseBoxDaten();
+      aktualisiereAnzeige(box);
+      erstelleDiagramm("Temperatur", box.sensors[0]._id, "tempChart");
+      erstelleDiagramm("Druck", box.sensors[2]._id, "druckChart");
     }
 
     // Hole die neuen Werte von der SenseBox
     async function getSenseBoxDaten() {
       const response = await fetch(api_url);
       const data = await response.json();
-      console.log(data);
-      box = data;
-    }
-
-    async function getSensordaten(sensorid) {
-      const response = await fetch(api_url + "/data/" + sensorid);
-      const data = await response.json();
-      console.log(data);
       return data;
     }
 
-    function aktualisiereAnzeige() {
+ 
+
+    function aktualisiereAnzeige(box) {
       const temp = box.sensors[0].lastMeasurement.value + " °C";
       const feuchte = box.sensors[1].lastMeasurement.value + " %";
       const druck = box.sensors[2].lastMeasurement.value + " hPa";
@@ -161,11 +152,17 @@
         options: {}
       };
 
-      return new Chart(
+      new Chart(
         document.getElementById(elementID),
         config
       );
 
+    }
+
+    async function getSensordaten(sensorid) {
+      const response = await fetch(api_url + "/data/" + sensorid);
+      const data = await response.json();
+      return data;
     }
 
   </script>
