@@ -90,42 +90,69 @@
   <script>
     const senseBoxID = "607db857542eeb001cba21f0";
     const api_url = "https://api.opensensemap.org/boxes/" + senseBoxID;
-    async function getSenseBox() {
+
+    let box;
+    let tempChart;
+    let druckChart;
+
+    aktualisieren();
+    // aktualisiere die Seite alls 60 Sekunden
+    let intervalID = window.setInterval(aktualisieren, 60000);
+
+    async function aktualisieren() {
+      await getSenseBoxDaten();
+      aktualisiereAnzeige();
+      tempChart = erstelleDiagramm("Temperatur", box.sensors[0]._id, "tempChart");
+      druckChart = erstelleDiagramm("Druck", box.sensors[2]._id, "druckChart");
+    }
+
+    // Hole die neuen Werte von der SenseBox
+    async function getSenseBoxDaten() {
       const response = await fetch(api_url);
       const data = await response.json();
       console.log(data);
-      const temp = data.sensors[0].lastMeasurement.value + " °C";
-      const feuchte = data.sensors[1].lastMeasurement.value + " %";
-      const druck = data.sensors[2].lastMeasurement.value + " hPa";
-      const licht = data.sensors[3].lastMeasurement.value + " lx";
+      box = data;
+    }
+
+    async function getSensordaten(sensorid) {
+      const response = await fetch(api_url + "/data/" + sensorid);
+      const data = await response.json();
+      console.log(data);
+      return data;
+    }
+
+    function aktualisiereAnzeige() {
+      const temp = box.sensors[0].lastMeasurement.value + " °C";
+      const feuchte = box.sensors[1].lastMeasurement.value + " %";
+      const druck = box.sensors[2].lastMeasurement.value + " hPa";
+      const licht = box.sensors[3].lastMeasurement.value + " lx";
       document.getElementById('temp').textContent = temp;
       document.getElementById('feuchte').textContent = feuchte;
       document.getElementById('druck').textContent = druck;
       document.getElementById('licht').textContent = licht;
     }
-    getSenseBox();
-    let intervalID = window.setInterval(getSenseBox, 60000);
-
-    erstelleTempDiagramm();
-
 
     // Diagramm:
-    function erstelleTempDiagramm() {
-      const labels = [
-        'January',
-        'February',
-        'March',
-        'April',
-        'May',
-        'June',
-      ];
+    async function erstelleDiagramm(name, sensor, elementID) {
+      // Hole die Werte des Sensors
+      let sensordaten = await getSensordaten(sensor);
+
+      let labels = [];
+      let werte = [];
+
+      // Verwende nur jeden 10. Wert
+      for (let i = sensordaten.length - 1; i > 0; i = i - 10) {
+        labels.push(sensordaten[i].createdAt.slice(11, 16));
+        werte.push(sensordaten[i].value);
+      }
+
       const data = {
         labels: labels,
         datasets: [{
-          label: 'Temperatur',
+          label: name,
           backgroundColor: 'rgb(255, 99, 132)',
           borderColor: 'rgb(255, 99, 132)',
-          data: [0, 10, 5, 2, 20, 30, 45],
+          data: werte,
         }]
       };
       const config = {
@@ -134,12 +161,13 @@
         options: {}
       };
 
-      const myChart = new Chart(
-        document.getElementById('tempChart'),
+      return new Chart(
+        document.getElementById(elementID),
         config
       );
 
     }
+
   </script>
 
 
